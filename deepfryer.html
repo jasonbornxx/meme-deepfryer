@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deep Fryer 3000</title>
+    <style>
+        /* MEME AESTHETIC CSS */
+        body {
+            background-color: #121212;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-shadow: 4px 4px #ff0000;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            background: #222;
+            border: 2px solid #ff0000;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px #ff0000;
+        }
+
+        .control-group {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* Custom File Input */
+        .file-input-wrapper {
+            margin-bottom: 20px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload {
+            border: 2px dashed #00ff00;
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .custom-file-upload:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+
+        button {
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            font-family: 'Impact', sans-serif;
+            cursor: pointer;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 5px 5px 0px #880000;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 3px 3px 0px #880000;
+        }
+
+        canvas {
+            max-width: 100%;
+            border: 5px solid #fff;
+            margin-top: 20px;
+            background: repeating-linear-gradient(
+                45deg,
+                #606dbc,
+                #606dbc 10px,
+                #465298 10px,
+                #465298 20px
+            );
+        }
+
+        .download-btn {
+            background-color: #0000ff;
+            box-shadow: 5px 5px 0px #000088;
+        }
+        
+        .download-btn:active {
+            box-shadow: 3px 3px 0px #000088;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>DEEP FRYER 3000</h1>
+    <p>Upload an image to destroy it.</p>
+
+    <div class="controls">
+        <div class="file-input-wrapper">
+            <label for="imageLoader" class="custom-file-upload">
+                📂 Choose Image
+            </label>
+            <input type="file" id="imageLoader" name="imageLoader" accept="image/*"/>
+        </div>
+
+        <div class="control-group">
+            <label>Sizzle (Saturation) <span id="sat-val">400%</span></label>
+            <input type="range" id="saturation" min="100" max="1000" value="400">
+        </div>
+
+        <div class="control-group">
+            <label>Crunch (Contrast) <span id="con-val">200%</span></label>
+            <input type="range" id="contrast" min="100" max="500" value="200">
+        </div>
+
+        <div class="control-group">
+            <label>Brightness Boost <span id="bri-val">120%</span></label>
+            <input type="range" id="brightness" min="100" max="300" value="120">
+        </div>
+
+        <div class="control-group">
+            <label>JPEG Decay (Quality) <span id="qual-val">1%</span></label>
+            <input type="range" id="quality" min="0" max="10" value="1">
+        </div>
+
+        <div class="control-group">
+            <label>Oil Level (Noise) <span id="noise-val">30%</span></label>
+            <input type="range" id="noise" min="0" max="100" value="30">
+        </div>
+
+        <button onclick="fryImage()">🔥 FRY IT 🔥</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    
+    <br>
+    <a id="downloadLink" style="display:none">
+        <button class="download-btn">💾 DOWNLOAD</button>
+    </a>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('imageLoader');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        // Slider elements
+        const satInput = document.getElementById('saturation');
+        const conInput = document.getElementById('contrast');
+        const briInput = document.getElementById('brightness');
+        const qualInput = document.getElementById('quality');
+        const noiseInput = document.getElementById('noise');
+
+        // Text display elements
+        const satVal = document.getElementById('sat-val');
+        const conVal = document.getElementById('con-val');
+        const briVal = document.getElementById('bri-val');
+        const qualVal = document.getElementById('qual-val');
+        const noiseVal = document.getElementById('noise-val');
+
+        let originalImage = new Image();
+        let isImageLoaded = false;
+
+        // Update labels in real time
+        [satInput, conInput, briInput, qualInput, noiseInput].forEach(input => {
+            input.addEventListener('input', () => {
+                satVal.innerText = satInput.value + "%";
+                conVal.innerText = conInput.value + "%";
+                briVal.innerText = briInput.value + "%";
+                qualVal.innerText = (qualInput.value / 100) + "";
+                noiseVal.innerText = noiseInput.value + "%";
+            });
+        });
+
+        // Load the image
+        fileInput.addEventListener('change', function(e){
+            const reader = new FileReader();
+            reader.onload = function(event){
+                originalImage.onload = function(){
+                    canvas.width = originalImage.width;
+                    canvas.height = originalImage.height;
+                    ctx.drawImage(originalImage, 0, 0);
+                    isImageLoaded = true;
+                    // Auto fry on load
+                    fryImage();
+                }
+                originalImage.src = event.target.result;
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        function fryImage() {
+            if(!isImageLoaded) {
+                alert("Upload an image first, you walnut!");
+                return;
+            }
+
+            // 1. Reset canvas with original image
+            ctx.filter = 'none';
+            ctx.drawImage(originalImage, 0, 0);
+
+            // 2. Add Noise (The "Oil")
+            addNoise(noiseInput.value);
+
+            // 3. Apply Extreme Filters (The "Sizzle")
+            // Note: We deliberately apply filters AFTER noise to make the noise distinct
+            const sat = satInput.value;
+            const con = conInput.value;
+            const bri = briInput.value;
+            
+            // We use the canvas filter prop
+            // Format: contrast(200%) brightness(150%) saturate(300%)
+            ctx.filter = `contrast(${con}%) brightness(${bri}%) saturate(${sat}%) hue-rotate(-10deg)`;
+            
+            // Draw the canvas onto itself to bake in the filters
+            ctx.drawImage(canvas, 0, 0);
+            
+            // Remove filter prop so it doesn't double apply on next steps
+            ctx.filter = 'none';
+
+            // 4. Sharpening Hack (Draw transparent orange overlay for that deep fried tint)
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.fillStyle = 'rgba(255, 100, 0, 0.2)'; // Faint orange/red
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'source-over'; // Reset blend mode
+
+            // 5. The JPEG Decay (The "Artifacts")
+            // This is async because loading the image takes a split second
+            applyJpegArtifacts();
+        }
+
+        function addNoise(amount) {
+            if(amount == 0) return;
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            const idata = ctx.getImageData(0, 0, w, h);
+            const buffer32 = new Uint32Array(idata.data.buffer);
+            const len = buffer32.length;
+            const intensity = amount * 2; // Multiplier for chaos
+
+            for (let i = 0; i < len; i++) {
+                if (Math.random() < 0.5) {
+                    // Slight bit manipulation for grain
+                    // We modify the alpha or rgb values slightly randomly
+                    let noise = (Math.random() * intensity) - (intensity / 2);
+                    // Use a bitwise hack to change the pixel color slightly
+                    buffer32[i] = buffer32[i] + (noise << 0); 
+                }
+            }
+            ctx.putImageData(idata, 0, 0);
+        }
+
+        function applyJpegArtifacts() {
+            // Get quality from slider (0 to 10 mapped to 0.0 to 0.1)
+            // Low numbers = high destruction
+            let q = qualInput.value / 100;
+            if (q === 0) q = 0.01; // Avoid pure 0
+
+            // Export canvas as a crappy JPEG
+            const crappyUrl = canvas.toDataURL('image/jpeg', q);
+
+            // Create a temp image to reload that crappy version
+            const tempImg = new Image();
+            tempImg.onload = function() {
+                // Draw the artifacted image back onto the canvas
+                ctx.drawImage(tempImg, 0, 0);
+                prepareDownload();
+            };
+            tempImg.src = crappyUrl;
+        }
+
+        function prepareDownload() {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            downloadLink.href = dataUrl;
+            downloadLink.download = 'deep_fried_meme.jpg';
+            downloadLink.style.display = 'inline-block';
+        }
+
+    </script>
+</body>
+</html>
